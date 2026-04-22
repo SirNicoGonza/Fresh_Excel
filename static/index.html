@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fresh Excel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3349;
+      --accent: #4f8ef7;
+      --accent2: #7c3aed;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --text: #e8eaf0;
+      --muted: #7b82a0;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      font-size: 2.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+    }
+
+    .subtitle { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 18px;
+    }
+
+    /* Drop zone */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(79,142,247,.04); }
+    .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .dropzone .icon { font-size: 2.4rem; margin-bottom: 10px; }
+    .dropzone .hint { color: var(--muted); font-size: .9rem; margin-top: 6px; }
+    .file-name { margin-top: 12px; color: var(--accent); font-weight: 600; font-size: .95rem; min-height: 22px; }
+
+    /* Options */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .toggle-item:hover { border-color: var(--accent); }
+
+    .toggle-item input { display: none; }
+    .toggle-switch {
+      width: 38px; height: 22px; min-width: 38px;
+      background: var(--border);
+      border-radius: 999px;
+      position: relative;
+      transition: background .2s;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform .2s;
+    }
+    .toggle-item input:checked ~ .toggle-switch { background: var(--accent); }
+    .toggle-item input:checked ~ .toggle-switch::after { transform: translateX(16px); }
+
+    .toggle-label { font-size: .9rem; line-height: 1.3; }
+    .toggle-label small { display: block; color: var(--muted); font-size: .78rem; margin-top: 2px; }
+
+    /* Output mode */
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mode-btn {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      text-align: center;
+    }
+    .mode-btn.active { border-color: var(--accent); background: rgba(79,142,247,.08); }
+    .mode-btn .mode-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .mode-btn .mode-title { font-weight: 600; font-size: .9rem; }
+    .mode-btn .mode-desc { color: var(--muted); font-size: .78rem; margin-top: 3px; }
+
+    /* Buttons */
+    .btn-row { display: flex; gap: 12px; margin-top: 4px; }
+    .btn {
+      flex: 1; padding: 13px 20px;
+      border: none; border-radius: 8px;
+      font-size: .95rem; font-weight: 600;
+      cursor: pointer; transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: .88; }
+
+    /* Analysis panel */
+    #analysis-panel { display: none; }
+
+    .stat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .stat-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: .83rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .stat-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-blue { background: var(--accent); }
+    .dot-yellow { background: var(--yellow); }
+    .dot-red { background: var(--red); }
+    .dot-green { background: var(--green); }
+
+    .issue-list { display: flex; flex-direction: column; gap: 6px; }
+    .issue-item {
+      background: var(--surface2);
+      border-left: 3px solid var(--yellow);
+      border-radius: 0 6px 6px 0;
+      padding: 8px 12px;
+      font-size: .83rem;
+      color: var(--muted);
+    }
+    .issue-item.date { border-left-color: var(--accent); }
+    .issue-item.char { border-left-color: var(--red); }
+    .issue-item.merge { border-left-color: var(--yellow); }
+
+    /* Progress */
+    #progress-section { display: none; }
+    .progress-bar-wrap {
+      background: var(--surface2);
+      border-radius: 999px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 999px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+    .progress-label { color: var(--muted); font-size: .85rem; text-align: center; }
+
+    /* Result */
+    #result-section { display: none; }
+    .result-box {
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+    .result-box.success { background: rgba(34,197,94,.07); border: 1px solid rgba(34,197,94,.25); }
+    .result-box.error { background: rgba(239,68,68,.07); border: 1px solid rgba(239,68,68,.25); }
+    .result-icon { font-size: 2.2rem; margin-bottom: 8px; }
+    .result-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
+    .result-sub { color: var(--muted); font-size: .85rem; }
+
+    .report-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+    .report-stat {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .report-stat .num { font-size: 1.5rem; font-weight: 800; }
+    .report-stat .lbl { color: var(--muted); font-size: .75rem; margin-top: 2px; }
+
+    .btn-download {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 14px;
+      background: var(--green);
+      color: #fff;
+      padding: 11px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: .95rem;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .btn-download:hover { opacity: .85; }
+
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    @media (max-width: 500px) {
+      .options-grid, .mode-grid, .report-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌿 Fresh Excel</div>
+  <p class="subtitle">Limpia formatos inconsistentes, celdas combinadas y caracteres rotos</p>
+</header>
+
+<!-- Upload -->
+<div class="card">
+  <div class="card-title">1 · Archivo Excel</div>
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+    <div class="icon">📂</div>
+    <div>Arrastra tu archivo aquí o <strong style="color:var(--accent)">haz click</strong> para seleccionar</div>
+    <div class="hint">Formatos soportados: .xlsx, .xls</div>
+    <div class="file-name" id="fileName"></div>
+  </div>
+</div>
+
+<!-- Analysis -->
+<div class="card" id="analysis-panel">
+  <div class="card-title">🔍 Análisis previo</div>
+  <div class="stat-row" id="statRow"></div>
+  <div class="issue-list" id="issueList"></div>
+</div>
+
+<!-- Options -->
+<div class="card">
+  <div class="card-title">2 · Opciones de limpieza</div>
+  <div class="options-grid">
+    <label class="toggle-item">
+      <input type="checkbox" id="optDates" checked />
+      <span class="toggle-switch"></span>
+      <span class="toggle-label">
+        Fechas inconsistentes
+        <small>Normaliza a formato YYYY-MM-DD</small>
+      </span>
+    </label>
+    <label class="toggle-item">
+      <input type="checkbox" id="optChars" checked />
+      <span class="toggle-switch"></span>
+      <span class="toggle-label">
+        Caracteres rotos
+        <small>Elimina símbolos corruptos y de control</small>
+      </span>
+    </label>
+    <label class="toggle-item" style="grid-column: 1 / -1">
+      <input type="checkbox" id="optMerge" checked />
+      <span class="toggle-switch"></span>
+      <span class="toggle-label">
+        Celdas combinadas (merged)
+        <small>Separa y rellena con el valor original</small>
+      </span>
+    </label>
+  </div>
+</div>
+
+<!-- Output mode -->
+<div class="card">
+  <div class="card-title">3 · Modo de salida</div>
+  <div class="mode-grid">
+    <div class="mode-btn active" data-mode="new" onclick="selectMode('new')">
+      <div class="mode-icon">✨</div>
+      <div class="mode-title">Archivo nuevo</div>
+      <div class="mode-desc">Genera <em>nombre_limpio.xlsx</em> sin tocar el original</div>
+    </div>
+    <div class="mode-btn" data-mode="overwrite" onclick="selectMode('overwrite')">
+      <div class="mode-icon">✏️</div>
+      <div class="mode-title">Reemplazar original</div>
+      <div class="mode-desc">Devuelve el mismo nombre con los cambios aplicados</div>
+    </div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="card">
+  <div class="btn-row">
+    <button class="btn btn-outline" onclick="runAnalysis()" id="btnAnalyze" disabled>🔍 Analizar</button>
+    <button class="btn btn-primary" onclick="runClean()" id="btnClean" disabled>🧹 Limpiar archivo</button>
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="card" id="progress-section">
+  <div class="card-title">⏳ Procesando...</div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">Iniciando...</div>
+</div>
+
+<!-- Result -->
+<div class="card" id="result-section"></div>
+
+<script>
+  let selectedMode = 'new';
+  let selectedFile = null;
+  let downloadUrl = null;
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileNameEl = document.getElementById('fileName');
+  const btnAnalyze = document.getElementById('btnAnalyze');
+  const btnClean = document.getElementById('btnClean');
+
+  // Drag & drop
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  function setFile(f) {
+    if (!f.name.match(/\.(xlsx|xls)$/i)) {
+      alert('Por favor selecciona un archivo .xlsx o .xls');
+      return;
+    }
+    selectedFile = f;
+    fileNameEl.textContent = '📄 ' + f.name;
+    btnAnalyze.disabled = false;
+    btnClean.disabled = false;
+    document.getElementById('analysis-panel').style.display = 'none';
+    document.getElementById('result-section').style.display = 'none';
+    if (downloadUrl) { URL.revokeObjectURL(downloadUrl); downloadUrl = null; }
+  }
+
+  function selectMode(mode) {
+    selectedMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(el => {
+      el.classList.toggle('active', el.dataset.mode === mode);
+    });
+  }
+
+  async function runAnalysis() {
+    if (!selectedFile) return;
+    btnAnalyze.disabled = true;
+    btnAnalyze.textContent = '⏳ Analizando...';
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    try {
+      const res = await fetch('/api/analyze', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      showAnalysis(data);
+    } catch (e) {
+      alert('Error al analizar: ' + e.message);
+    } finally {
+      btnAnalyze.disabled = false;
+      btnAnalyze.textContent = '🔍 Analizar';
+    }
+  }
+
+  function showAnalysis(data) {
+    const panel = document.getElementById('analysis-panel');
+    const statRow = document.getElementById('statRow');
+    const issueList = document.getElementById('issueList');
+
+    statRow.innerHTML = `
+      <div class="stat-chip"><span class="dot dot-blue"></span>${data.sheets.length} hoja(s)</div>
+      <div class="stat-chip"><span class="dot dot-blue"></span>${data.total_rows} filas</div>
+      <div class="stat-chip"><span class="dot dot-yellow"></span>${data.merged_cells} celdas combinadas</div>
+      <div class="stat-chip"><span class="dot dot-blue"></span>${data.date_columns.length} col. de fechas</div>
+      <div class="stat-chip"><span class="dot dot-red"></span>${data.broken_char_columns.length} col. con chars rotos</div>
+    `;
+
+    let html = '';
+    data.date_columns.forEach(c => {
+      html += `<div class="issue-item date">📅 Fechas inconsistentes detectadas en: <strong>${c}</strong></div>`;
+    });
+    data.broken_char_columns.forEach(c => {
+      html += `<div class="issue-item char">⚠️ Caracteres rotos en: <strong>${c}</strong></div>`;
+    });
+    if (data.merged_cells > 0) {
+      html += `<div class="issue-item merge">🔲 ${data.merged_cells} celdas combinadas encontradas</div>`;
+    }
+    if (!html) html = `<div class="issue-item" style="border-left-color:var(--green)">✅ No se encontraron problemas evidentes</div>`;
+
+    issueList.innerHTML = html;
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function runClean() {
+    if (!selectedFile) return;
+
+    setProgress(true, 10, 'Subiendo archivo...');
+    btnClean.disabled = true;
+    btnAnalyze.disabled = true;
+
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+    fd.append('fix_dates', document.getElementById('optDates').checked);
+    fd.append('fix_broken_chars', document.getElementById('optChars').checked);
+    fd.append('unmerge_cells', document.getElementById('optMerge').checked);
+    fd.append('output_mode', selectedMode);
+
+    try {
+      setProgress(true, 35, 'Procesando celdas combinadas...');
+      await sleep(300);
+      setProgress(true, 60, 'Normalizando fechas...');
+
+      const res = await fetch('/api/clean', { method: 'POST', body: fd });
+
+      setProgress(true, 85, 'Guardando archivo limpio...');
+      await sleep(200);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Error desconocido' }));
+        throw new Error(err.detail || res.statusText);
+      }
+
+      const blob = await res.blob();
+      const reportHeader = res.headers.get('X-Clean-Report') || '{}';
+      let summary = {};
+      try { summary = JSON.parse(reportHeader.replace(/'/g, '"')); } catch {}
+
+      downloadUrl = URL.createObjectURL(blob);
+      const contentDisp = res.headers.get('Content-Disposition') || '';
+      const nameMatch = contentDisp.match(/filename=(.+)/);
+      const filename = nameMatch ? nameMatch[1].trim() : (selectedMode === 'new'
+        ? selectedFile.name.replace(/\.xlsx?$/i, '_limpio.xlsx')
+        : selectedFile.name);
+
+      setProgress(true, 100, '¡Listo!');
+      await sleep(400);
+      setProgress(false);
+      showResult(true, summary, downloadUrl, filename);
+
+    } catch (e) {
+      setProgress(false);
+      showResult(false, {}, null, null, e.message);
+    } finally {
+      btnClean.disabled = false;
+      btnAnalyze.disabled = false;
+    }
+  }
+
+  function setProgress(visible, pct, label) {
+    const section = document.getElementById('progress-section');
+    section.style.display = visible ? 'block' : 'none';
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = label || '';
+    if (visible && pct < 100) section.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function showResult(success, summary, url, filename, errMsg) {
+    const section = document.getElementById('result-section');
+    if (success) {
+      section.innerHTML = `
+        <div class="result-box success">
+          <div class="result-icon">✅</div>
+          <div class="result-title">Archivo limpiado con éxito</div>
+          <div class="result-sub">${filename}</div>
+          <div class="report-grid">
+            <div class="report-stat">
+              <div class="num" style="color:var(--yellow)">${summary.unmerge_fixes ?? 0}</div>
+              <div class="lbl">Celdas separadas</div>
+            </div>
+            <div class="report-stat">
+              <div class="num" style="color:var(--accent)">${summary.date_fixes ?? 0}</div>
+              <div class="lbl">Fechas normalizadas</div>
+            </div>
+            <div class="report-stat">
+              <div class="num" style="color:var(--red)">${summary.char_fixes ?? 0}</div>
+              <div class="lbl">Chars corregidos</div>
+            </div>
+          </div>
+          <a class="btn-download" href="${url}" download="${filename}">⬇️ Descargar ${filename}</a>
+        </div>
+      `;
+    } else {
+      section.innerHTML = `
+        <div class="result-box error">
+          <div class="result-icon">❌</div>
+          <div class="result-title">Error al procesar el archivo</div>
+          <div class="result-sub">${errMsg || 'Por favor intenta nuevamente'}</div>
+        </div>
+      `;
+    }
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
