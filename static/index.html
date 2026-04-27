@@ -328,6 +328,25 @@
   </div>
 </div>
 
+<!-- Custom filename -->
+<div class="card">
+  <div class="card-title">4 · Nombre del archivo de salida <span style="color:var(--muted);font-weight:400;text-transform:none;font-size:.8rem">(opcional)</span></div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <input
+      type="text"
+      id="customFilename"
+      placeholder="Dejar vacío para usar el nombre automático"
+      style="flex:1;min-width:200px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;
+             padding:11px 14px;color:var(--text);font-size:.9rem;outline:none;transition:border-color .2s;"
+      oninput="updateFilenamePrev()"
+      onfocus="this.style.borderColor='var(--accent)'"
+      onblur="this.style.borderColor='var(--border)'"
+    />
+    <span id="extBadge" style="color:var(--muted);font-size:.85rem;white-space:nowrap;font-family:monospace"></span>
+  </div>
+  <div id="filenamePrev" style="color:var(--muted);font-size:.8rem;margin-top:8px;min-height:18px"></div>
+</div>
+
 <!-- Actions -->
 <div class="card">
   <div class="btn-row">
@@ -382,6 +401,7 @@
     btnClean.disabled = false;
     document.getElementById('analysis-panel').style.display = 'none';
     document.getElementById('result-section').style.display = 'none';
+    updateFilenamePrev();
     if (downloadUrl) { URL.revokeObjectURL(downloadUrl); downloadUrl = null; }
   }
 
@@ -390,6 +410,7 @@
     document.querySelectorAll('.mode-btn').forEach(el => {
       el.classList.toggle('active', el.dataset.mode === mode);
     });
+    updateFilenamePrev();
   }
 
   async function runAnalysis() {
@@ -456,6 +477,7 @@
     fd.append('fix_broken_chars', document.getElementById('optChars').checked);
     fd.append('unmerge_cells', document.getElementById('optMerge').checked);
     fd.append('output_mode', selectedMode);
+    fd.append('custom_filename', document.getElementById('customFilename').value.trim());
 
     try {
       setProgress(true, 35, 'Procesando celdas combinadas...');
@@ -477,12 +499,9 @@
       let summary = {};
       try { summary = JSON.parse(reportHeader.replace(/'/g, '"')); } catch {}
 
+      // Use the filename the server resolved (respects custom name, mode, original)
+      const filename = res.headers.get('X-Output-Filename') || selectedFile.name;
       downloadUrl = URL.createObjectURL(blob);
-      const contentDisp = res.headers.get('Content-Disposition') || '';
-      const nameMatch = contentDisp.match(/filename=(.+)/);
-      const filename = nameMatch ? nameMatch[1].trim() : (selectedMode === 'new'
-        ? selectedFile.name.replace(/\.xlsx?$/i, '_limpio.xlsx')
-        : selectedFile.name);
 
       setProgress(true, 100, '¡Listo!');
       await sleep(400);
@@ -542,6 +561,24 @@
     }
     section.style.display = 'block';
     section.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function updateFilenamePrev() {
+    if (!selectedFile) return;
+    const ext = selectedFile.name.match(/\.(xlsx?)$/i)?.[0] || '.xlsx';
+    const val = document.getElementById('customFilename').value.trim();
+    const prev = document.getElementById('filenamePrev');
+    const badge = document.getElementById('extBadge');
+    badge.textContent = ext;
+    if (val) {
+      const stem = val.replace(/\.(xlsx?)$/i, '');
+      prev.textContent = '→ Se descargará como: ' + stem + ext;
+    } else if (selectedMode === 'overwrite') {
+      prev.textContent = '→ Se descargará como: ' + selectedFile.name + ' (nombre original)';
+    } else {
+      const stem = selectedFile.name.replace(/\.(xlsx?)$/i, '');
+      prev.textContent = '→ Se descargará como: ' + stem + '_limpio' + ext;
+    }
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
